@@ -96,6 +96,7 @@
 <script src="https://unpkg.com/cornerstone-math@0.1.6/dist/cornerstoneMath.js"></script>
 <script src="https://unpkg.com/cornerstone-wado-image-loader@3.0.0/dist/cornerstoneWADOImageLoader.js"></script>
 <script src="https://unpkg.com/dicom-parser@1.8.3/dist/dicomParser.js"></script>
+<script src="https://unpkg.com/dcmjs@0.16.3/build/dcmjs.js"></script>
 <script src="../../dist/cornerstoneTools.js"></script>
 <script>
   window.cornerstoneTools ||
@@ -212,8 +213,7 @@
 
     generateMockData(uInt16View, probabilityMapUInt8View, columns);
 
-    const segMetadata = [null, { SegmentLabel: 'Segment 1' }, { SegmentLabel: 'Segment 2' }];
-
+    const segMetadata = [null, generateMockMetadata(1), generateMockMetadata(2)];
 
     segmentationModule.setters.fractionalLabelmap3DByFirstImageId(
       imageIds[0],
@@ -223,7 +223,97 @@
       segMetadata,
       imageIds.length,
     );
+
+    generateSeg()
   };
+
+  function generateSeg() {
+    const imagePromises = imageIds.map(cornerstone.loadAndCacheImage);
+
+    Promise.all(imagePromises).then(images => {
+
+      const activeLabelmap = segmentationModule.getters.labelmap3D(element, activeLabelmapIndex);
+
+      const segBlob = dcmjs.adapters.Cornerstone.Segmentation.generateSegmentation(
+        images,
+        [activeLabelmap],
+        { rleEncode: false }
+      );
+
+      // Modify the buffer as needed for now.
+      segBlob.arrayBuffer().then(buffer => {
+        const { width, height } = images[0];
+        const { DicomMessage, DicomMetaDictionary, datasetToBlob } = dcmjs.data;
+
+        const dicomData = DicomMessage.readFile(buffer);
+        const dataset = DicomMetaDictionary.naturalizeDataset(dicomData.dict);
+        dataset._meta = DicomMetaDictionary.namifyDataset(dicomData.meta);
+
+        // Set fractional and copy pixeldata in as fractional.
+        dataset.BitsAllocated = "8";
+        dataset.BitsStored = "8";
+        dataset.HighBit = "7";
+        dataset.SegmentationType = "FRACTIONAL";
+        dataset.SegmentationFractionalType = "PROBABILITY";
+        dataset.MaximumFractionalValue = "255";
+        dataset._meta.TransferSyntaxUID.Value[0] = '1.2.840.10008.1.2.1'
+        //dataset._vrMap.PixelData = "OW";
+
+        const newBuffer = new ArrayBuffer(width * height * 2) // 2 Segmentation frames.
+        const newBufferUInt8View = new Uint8Array(newBuffer);
+        const labelmapBufferView = new Uint16Array(activeLabelmap.buffer, 0, width * height); // 2 as only first frame.
+        const probabilityBufferView = new Uint8Array(activeLabelmap.probabilityBuffer, 0, width * height); // 2 as only first frame.
+
+        let pixelIndex = 0;
+
+        for (let segmentIndex = 1; segmentIndex <= 2; segmentIndex++) {
+          for (let p = 0; p < labelmapBufferView.length; p++) {
+            if (labelmapBufferView[p] === segmentIndex) {
+              newBufferUInt8View[pixelIndex] = probabilityBufferView[p];
+            }
+            pixelIndex++;
+          }
+        }
+
+        dataset.PixelData = newBuffer;
+
+        const newSegBlob = datasetToBlob(dataset);
+
+        //Create a URL for the binary.
+        var objectUrl = URL.createObjectURL(newSegBlob);
+        window.open(objectUrl);
+      });
+
+
+    })
+  }
+
+  function generateMockMetadata(segmentIndex) {
+    // TODO -> Use colors from the cornerstoneTools LUT.
+    const RecommendedDisplayCIELabValue = dcmjs.data.Colors.rgb2DICOMLAB([
+      1,
+      0,
+      0
+    ]);
+
+    return {
+      SegmentedPropertyCategoryCodeSequence: {
+        CodeValue: "T-D0050",
+        CodingSchemeDesignator: "SRT",
+        CodeMeaning: "Tissue"
+      },
+      SegmentNumber: (segmentIndex + 1).toString(),
+      SegmentLabel: "Tissue " + (segmentIndex + 1).toString(),
+      SegmentAlgorithmType: "SEMIAUTOMATIC",
+      SegmentAlgorithmName: "Slicer Prototype",
+      RecommendedDisplayCIELabValue,
+      SegmentedPropertyTypeCodeSequence: {
+        CodeValue: "T-D0050",
+        CodingSchemeDesignator: "SRT",
+        CodeMeaning: "Tissue"
+      }
+    };
+  }
 
 
   function generatePerSegmentColorLUT() {
