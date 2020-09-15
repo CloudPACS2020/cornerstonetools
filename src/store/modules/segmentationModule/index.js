@@ -19,6 +19,7 @@ import {
 } from './getLabelmapBuffers';
 import {
   setLabelmap3DByFirstImageId,
+  setFractionalLabelmap3DByFirstImageId,
   setLabelmap3DForElement,
 } from './setLabelmap3D.js';
 import getLabelmapStats from './getLabelmapStats';
@@ -114,6 +115,7 @@ export default {
     metadata: setMetadata,
     labelmap3DForElement: setLabelmap3DForElement,
     labelmap3DByFirstImageId: setLabelmap3DByFirstImageId,
+    fractionalLabelmap3DByFirstImageId: setFractionalLabelmap3DByFirstImageId,
     incrementActiveSegmentIndex,
     decrementActiveSegmentIndex,
     activeSegmentIndex: setActiveSegmentIndex,

@@ -54,6 +54,53 @@ function setLabelmap3DForElement(
 }
 
 /**
+ * Takes a 16-bit encoded `ArrayBuffer` and stores it as a `Labelmap3D` for
+ * the `BrushStackState` associated with the firstImageId. Takes a 8-bit encoded `ArrayBuffer`
+ * as an associated probability map.
+ *
+ * @param  {HTMLElement|string} firstImageId  The firstImageId of the series to
+ *                                            store the segmentation on.
+ * @param  {ArrayBuffer} buffer
+ * @param  {ArrayBuffer} probabilityBuffer
+ * @param  {number} labelmapIndex The index to store the labelmap under.
+ * @param  {Object[]} metadata = [] Any metadata about the segments.
+ * @param  {number} numberOfFrames The number of frames, required to set up the
+ *                                 relevant labelmap2D views.
+ * @param  {number[][]} [segmentsOnLabelmapArray] An array of array of segments on each imageIdIndex.
+ *                       If not present, is calculated.
+ * @param  {colorLUTIndex} [colorLUTIndex = 0] The index of the colorLUT to use to render the segmentation.
+ * @returns {null}
+ */
+function setFractionalLabelmap3DByFirstImageId(
+  firstImageId,
+  buffer,
+  probabilityBuffer,
+  labelmapIndex,
+  metadata,
+  numberOfFrames,
+  segmentsOnLabelmapArray,
+  colorLUTIndex = 0
+) {
+  setLabelmap3DByFirstImageId(
+    firstImageId,
+    buffer,
+    labelmapIndex,
+    metadata,
+    numberOfFrames,
+    segmentsOnLabelmapArray,
+    colorLUTIndex
+  );
+
+  const brushStackState = state.series[firstImageId];
+
+  const labelmap3D = brushStackState.labelmaps3D[labelmapIndex];
+
+  labelmap3D.isFractional = true;
+  labelmap3D.probabilityBuffer = probabilityBuffer;
+  labelmap3D.probabilityMaps2D = [];
+}
+
+/**
  * Takes an 16-bit encoded `ArrayBuffer` and stores it as a `Labelmap3D` for
  * the `BrushStackState` associated with the firstImageId.
  *
@@ -143,4 +190,8 @@ function setLabelmap3DByFirstImageId(
   }
 }
 
-export { setLabelmap3DByFirstImageId, setLabelmap3DForElement };
+export {
+  setLabelmap3DByFirstImageId,
+  setLabelmap3DForElement,
+  setFractionalLabelmap3DByFirstImageId,
+};

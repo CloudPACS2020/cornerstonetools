@@ -5,6 +5,10 @@ import {
   transformCanvasContext,
 } from '../../drawing/index.js';
 import external from '../../externalModules';
+import { getToolState } from '../../stateManagement/toolState';
+import { getLogger } from '../../util/logger';
+
+const logger = getLogger('eventDispatchers:touchEventHandlers');
 
 const segmentationModule = getModule('segmentation');
 
@@ -48,6 +52,32 @@ export function getLabelmapCanvas(evt, labelmap3D, labelmap2D) {
 
   // Image data initialized with all transparent black.
   const imageData = new ImageData(cols, rows);
+
+  if (labelmap3D.isFractional) {
+    fillLabelmapCanvasFractional(
+      eventData,
+      labelmap3D,
+      pixelData,
+      imageData,
+      segmentsHidden,
+      colorLutTable
+    );
+  } else {
+    fillLabelmapCanvas(pixelData, imageData, segmentsHidden, colorLutTable);
+  }
+
+  // Put this image data onto the labelmapCanvas.
+  ctx.putImageData(imageData, 0, 0);
+
+  return canvasElement;
+}
+
+function fillLabelmapCanvas(
+  pixelData,
+  imageData,
+  segmentsHidden,
+  colorLutTable
+) {
   const data = imageData.data;
 
   for (let i = 0; i < pixelData.length; i++) {
@@ -63,11 +93,76 @@ export function getLabelmapCanvas(evt, labelmap3D, labelmap2D) {
       data[4 * i + 3] = color[3]; // A value
     }
   }
+}
 
-  // Put this image data onto the labelmapCanvas.
-  ctx.putImageData(imageData, 0, 0);
+function fillLabelmapCanvasFractional(
+  eventData,
+  labelmap3D,
+  pixelData,
+  imageData,
+  segmentsHidden,
+  colorLutTable
+) {
+  const { element, image } = eventData;
 
-  return canvasElement;
+  if (!element) {
+    return;
+  }
+
+  const stackState = getToolState(element, 'stack');
+
+  if (!stackState) {
+    logger.error(
+      'Consumers must define stacks in their application if using segmentations in cornerstoneTools.'
+    );
+
+    return;
+  }
+
+  const stackData = stackState.data[0];
+
+  const currentImageIdIndex = stackData.currentImageIdIndex;
+  const { rows, columns } = image;
+
+  const sliceLength = rows * columns;
+
+  const elementOffset = sliceLength * currentImageIdIndex;
+
+  const probabilityMapFilter = new Uint8Array(
+    labelmap3D.probabilityBuffer,
+    elementOffset,
+    sliceLength
+  );
+
+  // TODO -> colormaps
+  const data = imageData.data;
+
+  for (let i = 0; i < pixelData.length; i++) {
+    const segmentIndex = pixelData[i];
+
+    if (segmentIndex !== 0 && !segmentsHidden[segmentIndex]) {
+      const probabilityValue = probabilityMapFilter[i];
+
+      // TODO -> Check if an individual colormap exists.
+
+      const colorOrPerSegmentColorLUTTable = colorLutTable[pixelData[i]];
+
+      if (Array.isArray(colorOrPerSegmentColorLUTTable[0])) {
+        const color = colorOrPerSegmentColorLUTTable[probabilityValue];
+
+        data[4 * i] = color[0]; // R value
+        data[4 * i + 1] = color[1]; // G value
+        data[4 * i + 2] = color[2]; // B value
+        data[4 * i + 3] = color[3]; // A value
+      } else {
+        // Modify ImageData.
+        data[4 * i] = colorOrPerSegmentColorLUTTable[0]; // R value
+        data[4 * i + 1] = colorOrPerSegmentColorLUTTable[1]; // G value
+        data[4 * i + 2] = colorOrPerSegmentColorLUTTable[2]; // B value
+        data[4 * i + 3] = probabilityValue; // A value
+      }
+    }
+  }
 }
 
 /**

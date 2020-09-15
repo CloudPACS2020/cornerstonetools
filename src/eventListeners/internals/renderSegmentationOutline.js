@@ -2,6 +2,7 @@ import { getModule } from '../../store/index.js';
 import external from '../../externalModules.js';
 import { getNewContext, draw, drawLines } from '../../drawing/index.js';
 import { disableLogger } from '../../index.js';
+import { getColorForSegmentIndexColorLUT } from '../../store/modules/segmentationModule/colorLUT.js';
 
 const segmentationModule = getModule('segmentation');
 
@@ -57,7 +58,7 @@ export function renderOutline(
   draw(context, context => {
     for (let i = 1; i < outline.length; i++) {
       if (outline[i]) {
-        const color = colorLutTable[i];
+        const color = getOutlineColor(colorLutTable, i);
 
         drawLines(
           context,
@@ -74,6 +75,19 @@ export function renderOutline(
   });
 
   context.globalAlpha = previousAlpha;
+}
+
+function getOutlineColor(colorLutTable, segmentIndex) {
+  const colorOrPerSegmentColorLUTTable = colorLutTable[segmentIndex];
+
+  if (Array.isArray(colorOrPerSegmentColorLUTTable[0])) {
+    // Return the max probability value for the outline.
+    return colorOrPerSegmentColorLUTTable[
+      colorOrPerSegmentColorLUTTable.length - 1
+    ];
+  }
+
+  return colorOrPerSegmentColorLUTTable;
 }
 
 /**

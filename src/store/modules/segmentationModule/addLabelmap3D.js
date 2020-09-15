@@ -41,3 +41,15 @@ export default function addLabelmap3D(brushStackState, labelmapIndex, size) {
     redo: [],
   };
 }
+
+function addFractionalLabelmap3D(brushStackState, labelmapIndex, size) {
+  addLabelmap3D(brushStackState, labelmapIndex, size);
+
+  const labelmap3D = brushStackState.labelmaps3D[labelmapIndex];
+
+  labelmap3D.isFractional = true;
+  labelmap3D.probabilityBuffer = new ArrayBuffer(size);
+  labelmap3D.probabilityMaps2D = [];
+}
+
+export { addFractionalLabelmap3D };
