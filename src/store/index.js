@@ -6,6 +6,10 @@ import globalConfiguration from './modules/globalConfigurationModule.js';
 import external from '../externalModules.js';
 import { getLogger } from '../util/logger.js';
 
+//TEMP
+import _tempXNAT from './_tempXNAT/index.js';
+//TEMP
+
 const logger = getLogger('store:modules:storeLogger');
 
 export const state = {
@@ -61,4 +65,5 @@ export default {
   modules,
   state,
   getters,
+  _tempXNAT,
 };

@@ -59,6 +59,16 @@
                 visible
               </td>
             </tr>
+            <tr>
+              <th>
+                <button type="button" api-call="save-to-seg-and-reload">
+                  Save to seg and reload
+                </button>
+              </th>
+              <td id="toggle-segment-1-label">
+                visible
+              </td>
+            </tr>
           </table>
 
           <h2>Global Properties</h2>
@@ -223,70 +233,8 @@
       segMetadata,
       imageIds.length,
     );
-
-    generateSeg()
   };
 
-  function generateSeg() {
-    const imagePromises = imageIds.map(cornerstone.loadAndCacheImage);
-
-    Promise.all(imagePromises).then(images => {
-
-      const activeLabelmap = segmentationModule.getters.labelmap3D(element, activeLabelmapIndex);
-
-      const segBlob = dcmjs.adapters.Cornerstone.Segmentation.generateSegmentation(
-        images,
-        [activeLabelmap],
-        { rleEncode: false }
-      );
-
-      // Modify the buffer as needed for now.
-      segBlob.arrayBuffer().then(buffer => {
-        const { width, height } = images[0];
-        const { DicomMessage, DicomMetaDictionary, datasetToBlob } = dcmjs.data;
-
-        const dicomData = DicomMessage.readFile(buffer);
-        const dataset = DicomMetaDictionary.naturalizeDataset(dicomData.dict);
-        dataset._meta = DicomMetaDictionary.namifyDataset(dicomData.meta);
-
-        // Set fractional and copy pixeldata in as fractional.
-        dataset.BitsAllocated = "8";
-        dataset.BitsStored = "8";
-        dataset.HighBit = "7";
-        dataset.SegmentationType = "FRACTIONAL";
-        dataset.SegmentationFractionalType = "PROBABILITY";
-        dataset.MaximumFractionalValue = "255";
-        dataset._meta.TransferSyntaxUID.Value[0] = '1.2.840.10008.1.2.1'
-        //dataset._vrMap.PixelData = "OW";
-
-        const newBuffer = new ArrayBuffer(width * height * 2) // 2 Segmentation frames.
-        const newBufferUInt8View = new Uint8Array(newBuffer);
-        const labelmapBufferView = new Uint16Array(activeLabelmap.buffer, 0, width * height); // 2 as only first frame.
-        const probabilityBufferView = new Uint8Array(activeLabelmap.probabilityBuffer, 0, width * height); // 2 as only first frame.
-
-        let pixelIndex = 0;
-
-        for (let segmentIndex = 1; segmentIndex <= 2; segmentIndex++) {
-          for (let p = 0; p < labelmapBufferView.length; p++) {
-            if (labelmapBufferView[p] === segmentIndex) {
-              newBufferUInt8View[pixelIndex] = probabilityBufferView[p];
-            }
-            pixelIndex++;
-          }
-        }
-
-        dataset.PixelData = newBuffer;
-
-        const newSegBlob = datasetToBlob(dataset);
-
-        //Create a URL for the binary.
-        var objectUrl = URL.createObjectURL(newSegBlob);
-        window.open(objectUrl);
-      });
-
-
-    })
-  }
 
   function generateMockMetadata(segmentIndex) {
     // TODO -> Use colors from the cornerstoneTools LUT.
@@ -524,6 +472,51 @@
         cornerstone.updateImage(element);
 
         break;
+      case 'save-to-seg-and-reload':
+        async function saveToSegAndReload() {
+          const labelmap3D = segmentationModule.getters.labelmap3D(
+            element,
+            activeLabelmapIndex
+          );
+
+
+          const segBlob = await cornerstoneTools.store._tempXNAT.generateFractionalSegmentation(dcmjs, imageIds, labelmap3D);
+
+
+          // //Create a URL for the binary.
+          // var objectUrl = URL.createObjectURL(segBlob);
+          // window.open(objectUrl);
+
+
+          segmentationModule.state.series = {};
+          cornerstone.updateImage(element);
+
+          const buffer = await segBlob.arrayBuffer();
+
+          const {
+            labelmapBuffer,
+            probabilityMapBuffer,
+            segMetadata
+          } = cornerstoneTools.store._tempXNAT.Segmentation_4X_fork.generateToolState(
+            imageIds,
+            buffer,
+            cornerstone.metaData
+          );
+
+          segmentationModule.setters.fractionalLabelmap3DByFirstImageId(
+            imageIds[0],
+            labelmapBuffer,
+            probabilityMapBuffer,
+            0,
+            segMetadata,
+            imageIds.length,
+          );
+
+          cornerstone.updateImage(element);
+        }
+
+        saveToSegAndReload();
+
       default:
         return;
     }
