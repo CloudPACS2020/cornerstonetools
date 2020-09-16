@@ -260,8 +260,6 @@ function _createSegFromImages(images, isMultiframe, options) {
  *                    segment metadata can be derived.
  */
 function generateToolState(imageIds, arrayBuffer, metadataProvider) {
-  debugger;
-
   const dicomData = DicomMessage.readFile(arrayBuffer);
   const dataset = DicomMetaDictionary.naturalizeDataset(dicomData.dict);
   dataset._meta = DicomMetaDictionary.namifyDataset(dicomData.meta);
@@ -376,8 +374,6 @@ function generateToolState(imageIds, arrayBuffer, metadataProvider) {
     isFractional,
     probabilityMapBuffer
   );
-
-  debugger;
 
   return {
     labelmapBuffer,
