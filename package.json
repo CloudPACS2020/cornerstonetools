@@ -95,7 +95,11 @@
   "dependencies": {
     "@babel/runtime": "7.1.2",
     "cornerstone-math": "0.1.9",
-    "dcmjs": "0.18.10"
+    "dcmjs": "0.18.10",
+    "gl-matrix": "^3.1.0",
+    "lodash.clonedeep": "^4.5.0",
+    "loglevelnext": "^3.0.1",
+    "ndarray": "^1.0.19"
   },
   "files": [
     "dist/cornerstoneTools.js",
