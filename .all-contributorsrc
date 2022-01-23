@@ -316,6 +316,33 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "codepage949",
+      "name": "codepage949",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/26968918?v=4",
+      "profile": "https://github.com/codepage949",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "kivikakk",
+      "name": "Asherah Connor",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1915?v=4",
+      "profile": "https://kivikakk.ee",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "eltociear",
+      "name": "Ikko Ashimine",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22633385?v=4",
+      "profile": "https://bandism.net/",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7

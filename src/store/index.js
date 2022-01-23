@@ -6,9 +6,9 @@ import globalConfiguration from './modules/globalConfigurationModule.js';
 import external from '../externalModules.js';
 import { getLogger } from '../util/logger.js';
 
-//TEMP
+// TEMP
 import _tempXNAT from './_tempXNAT/index.js';
-//TEMP
+// TEMP
 
 const logger = getLogger('store:modules:storeLogger');
 
