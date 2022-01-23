@@ -1,4 +1,4 @@
-/*! cornerstone-tools - 5.3.0 - 2022-01-22 | (c) 2017 Chris Hafey | https://github.com/cornerstonejs/cornerstoneTools */
+/*! cornerstone-tools - 5.3.0 - 2022-01-23 | (c) 2017 Chris Hafey | https://github.com/cornerstonejs/cornerstoneTools */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -74,7 +74,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "582e5a838dd1c79b77d1";
+/******/ 	var hotCurrentHash = "cd50dabedde6d97d5303";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -39881,6 +39881,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+/* eslint-disable no-console */
+
 
 
 
@@ -40267,23 +40269,43 @@ function insertPixelDataPlanar(segmentsOnFrame, segmentsOnFrameArray, labelmapBu
 
     var labelmap2DView = new Uint16Array(labelmapBufferArray[0], byteOffset, sliceLength);
     var probabilityMap2DView = isFractional ? new Uint8Array(probabilityMapBuffer, sliceLength * imageIdIndex, sliceLength) : null;
-    var data = alignedPixelDataI.data; //
+    var data = alignedPixelDataI.data;
 
-    for (var j = 0, len = alignedPixelDataI.data.length; j < len; ++j) {
-      if (data[j]) {
-        for (var x = j; x < len; ++x) {
-          if (data[x]) {
-            labelmap2DView[x] = segmentIndex;
-            probabilityMap2DView[x] = data[x];
+    if (isFractional) {
+      // Fill in probability map aswell. Better to duplicate the loop then call if inside every voxel
+      for (var j = 0, len = alignedPixelDataI.data.length; j < len; ++j) {
+        if (data[j]) {
+          for (var x = j; x < len; ++x) {
+            if (data[x]) {
+              labelmap2DView[x] = segmentIndex;
+              probabilityMap2DView[x] = data[x];
+            }
           }
-        }
 
-        if (!segmentsOnFrame[imageIdIndex]) {
-          segmentsOnFrame[imageIdIndex] = [];
-        }
+          if (!segmentsOnFrame[imageIdIndex]) {
+            segmentsOnFrame[imageIdIndex] = [];
+          }
 
-        segmentsOnFrame[imageIdIndex].push(segmentIndex);
-        break;
+          segmentsOnFrame[imageIdIndex].push(segmentIndex);
+          break;
+        }
+      }
+    } else {
+      for (var _j = 0, _len = alignedPixelDataI.data.length; _j < _len; ++_j) {
+        if (data[_j]) {
+          for (var _x = _j; _x < _len; ++_x) {
+            if (data[_x]) {
+              labelmap2DView[_x] = segmentIndex;
+            }
+          }
+
+          if (!segmentsOnFrame[imageIdIndex]) {
+            segmentsOnFrame[imageIdIndex] = [];
+          }
+
+          segmentsOnFrame[imageIdIndex].push(segmentIndex);
+          break;
+        }
       }
     }
   };
@@ -40343,19 +40365,33 @@ function checkIfPerpendicular(iop1, iop2, tolerance) {
 
 function unpackPixelData(multiframe) {
   var segType = multiframe.SegmentationType;
+  var data;
 
-  if (segType === 'BINARY') {
-    return BitArray.unpack(multiframe.PixelData);
+  if (Array.isArray(multiframe.PixelData)) {
+    data = multiframe.PixelData[0];
+  } else {
+    data = multiframe.PixelData;
   }
 
-  var pixelData = new Uint8Array(multiframe.PixelData);
+  if (data === undefined) {
+    loglevelnext__WEBPACK_IMPORTED_MODULE_3___default.a.error('This segmentation pixeldata is undefined.');
+  }
+
+  if (segType === 'BINARY') {
+    return {
+      pixelData: BitArray.unpack(data),
+      isFractional: false
+    };
+  }
+
+  var pixelData = new Uint8Array(data);
   var max = multiframe.MaximumFractionalValue;
   var onlyMaxAndZero = pixelData.find(function (element) {
     return element !== 0 && element !== max;
   }) === undefined;
 
   if (!onlyMaxAndZero) {
-    loglevelnext__WEBPACK_IMPORTED_MODULE_3___default.a.warn('This segmentation object is actually binary... processing as such.');
+    loglevelnext__WEBPACK_IMPORTED_MODULE_3___default.a.warn('This segmentation object is actually fractional... processing as such.');
   }
 
   return {
