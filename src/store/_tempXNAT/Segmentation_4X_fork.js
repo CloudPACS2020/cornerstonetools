@@ -559,23 +559,43 @@ function insertPixelDataPlanar(
 
     const data = alignedPixelDataI.data;
 
-    //
-    for (let j = 0, len = alignedPixelDataI.data.length; j < len; ++j) {
-      if (data[j]) {
-        for (let x = j; x < len; ++x) {
-          if (data[x]) {
-            labelmap2DView[x] = segmentIndex;
-            probabilityMap2DView[x] = data[x];
+    if (isFractional) {
+      // Fill in probability map aswell. Better to duplicate the loop then call if inside every voxel
+      for (let j = 0, len = alignedPixelDataI.data.length; j < len; ++j) {
+        if (data[j]) {
+          for (let x = j; x < len; ++x) {
+            if (data[x]) {
+              labelmap2DView[x] = segmentIndex;
+              probabilityMap2DView[x] = data[x];
+            }
           }
+
+          if (!segmentsOnFrame[imageIdIndex]) {
+            segmentsOnFrame[imageIdIndex] = [];
+          }
+
+          segmentsOnFrame[imageIdIndex].push(segmentIndex);
+
+          break;
         }
+      }
+    } else {
+      for (let j = 0, len = alignedPixelDataI.data.length; j < len; ++j) {
+        if (data[j]) {
+          for (let x = j; x < len; ++x) {
+            if (data[x]) {
+              labelmap2DView[x] = segmentIndex;
+            }
+          }
 
-        if (!segmentsOnFrame[imageIdIndex]) {
-          segmentsOnFrame[imageIdIndex] = [];
+          if (!segmentsOnFrame[imageIdIndex]) {
+            segmentsOnFrame[imageIdIndex] = [];
+          }
+
+          segmentsOnFrame[imageIdIndex].push(segmentIndex);
+
+          break;
         }
-
-        segmentsOnFrame[imageIdIndex].push(segmentIndex);
-
-        break;
       }
     }
   }
