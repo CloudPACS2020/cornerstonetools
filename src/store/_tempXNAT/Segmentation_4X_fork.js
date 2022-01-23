@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import dcmjs from 'dcmjs';
 import log from 'loglevelnext';
 import ndarray from 'ndarray';
@@ -677,11 +678,26 @@ function checkIfPerpendicular(iop1, iop2, tolerance) {
 function unpackPixelData(multiframe) {
   const segType = multiframe.SegmentationType;
 
-  if (segType === 'BINARY') {
-    return BitArray.unpack(multiframe.PixelData);
+  let data;
+
+  if (Array.isArray(multiframe.PixelData)) {
+    data = multiframe.PixelData[0];
+  } else {
+    data = multiframe.PixelData;
   }
 
-  const pixelData = new Uint8Array(multiframe.PixelData);
+  if (data === undefined) {
+    log.error('This segmentation pixeldata is undefined.');
+  }
+
+  if (segType === 'BINARY') {
+    return {
+      pixelData: BitArray.unpack(data),
+      isFractional: false,
+    };
+  }
+
+  const pixelData = new Uint8Array(data);
 
   const max = multiframe.MaximumFractionalValue;
   const onlyMaxAndZero =
@@ -689,7 +705,7 @@ function unpackPixelData(multiframe) {
 
   if (!onlyMaxAndZero) {
     log.warn(
-      'This segmentation object is actually binary... processing as such.'
+      'This segmentation object is actually fractional... processing as such.'
     );
   }
 
